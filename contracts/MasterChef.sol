@@ -71,6 +71,8 @@ contract MasterChef is Ownable {
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
+    // Info on lptoken
+    mapping(address => bool) public lpCheck;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
     // The block number when SICLE mining starts.
@@ -82,6 +84,10 @@ contract MasterChef is Ownable {
         uint256 indexed pid,
         uint256 amount
     );
+    event LpAdded(uint256 _allocPoint, address indexed _lptoken);
+    event UpdateAlloc(uint256 _pid, uint256 allocPoint, bool _withUpdate);
+    event MigratorSet(address indexed _migrator);
+    event DevAddress(address indexed _devaddr);
 
     constructor(
         SicleToken _sicle,
@@ -107,7 +113,8 @@ contract MasterChef is Ownable {
         uint256 _allocPoint,
         IERC20 _lpToken,
         bool _withUpdate
-    ) public onlyOwner {
+    ) external onlyOwner {
+        require(lpCheck[_lpToken] != true, "MasterChef: LP already added");
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -122,6 +129,8 @@ contract MasterChef is Ownable {
                 accSiclePerShare: 0
             })
         );
+        lpCheck[_lpToken] = true;
+        emit LpAdded(_allocPoint, _lptoken);
     }
 
     // Update the given pool's SICLE allocation point. Can only be called by the owner.
@@ -129,7 +138,7 @@ contract MasterChef is Ownable {
         uint256 _pid,
         uint256 _allocPoint,
         bool _withUpdate
-    ) public onlyOwner {
+    ) external onlyOwner {
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -137,11 +146,13 @@ contract MasterChef is Ownable {
             _allocPoint
         );
         poolInfo[_pid].allocPoint = _allocPoint;
+        emit UpdateAlloc(_pid, allocPoint, _withUpdate);
     }
 
     // Set the migrator contract. Can only be called by the owner.
-    function setMigrator(IMigratorChef _migrator) public onlyOwner {
+    function setMigrator(IMigratorChef _migrator) external onlyOwner {
         migrator = _migrator;
+        emit MigratorSet(_migrator);
     }
 
     // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
@@ -231,7 +242,7 @@ contract MasterChef is Ownable {
     }
 
     // Deposit LP tokens to MasterChef for SICLE allocation.
-    function deposit(uint256 _pid, uint256 _amount) public {
+    function deposit(uint256 _pid, uint256 _amount) external {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
@@ -253,7 +264,7 @@ contract MasterChef is Ownable {
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _pid, uint256 _amount) public {
+    function withdraw(uint256 _pid, uint256 _amount) external {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
@@ -270,13 +281,13 @@ contract MasterChef is Ownable {
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
-    function emergencyWithdraw(uint256 _pid) public {
+    function emergencyWithdraw(uint256 _pid) external {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        pool.lpToken.safeTransfer(address(msg.sender), user.amount);
-        emit EmergencyWithdraw(msg.sender, _pid, user.amount);
         user.amount = 0;
         user.rewardDebt = 0;
+        pool.lpToken.safeTransfer(address(msg.sender), user.amount);
+        emit EmergencyWithdraw(msg.sender, _pid, user.amount);
     }
 
     // Safe sicle transfer function, just in case if rounding error causes pool to not have enough SICLEs.
@@ -290,8 +301,9 @@ contract MasterChef is Ownable {
     }
 
     // Update dev address by the previous dev.
-    function dev(address _devaddr) public {
+    function dev(address _devaddr) external {
         require(msg.sender == devaddr, "dev: wut?");
         devaddr = _devaddr;
+        emit DevAddress(_devaddr);
     }
 }

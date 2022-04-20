@@ -13,19 +13,22 @@ contract Migrator {
     uint256 public notBeforeBlock;
     uint256 public desiredLiquidity = uint256(-1);
 
+    event migrate(IUniswapV2Pair orig);
+
     constructor(
         address _chef,
         address _oldFactory,
         IUniswapV2Factory _factory,
         uint256 _notBeforeBlock
     ) public {
+        require(_chef != address(0) || _oldFactory != address(0) || _factory != address(0), "Migrator: zero address");
         chef = _chef;
         oldFactory = _oldFactory;
         factory = _factory;
         notBeforeBlock = _notBeforeBlock;
     }
 
-    function migrate(IUniswapV2Pair orig) public returns (IUniswapV2Pair) {
+    function migrate(IUniswapV2Pair orig) external returns (IUniswapV2Pair) {
         require(msg.sender == chef, "not from master chef");
         require(block.number >= notBeforeBlock, "too early to migrate");
         require(orig.factory() == oldFactory, "not from old factory");
@@ -42,6 +45,7 @@ contract Migrator {
         orig.burn(address(pair));
         pair.mint(msg.sender);
         desiredLiquidity = uint256(-1);
+        emit migrate(orig);
         return pair;
     }
 }

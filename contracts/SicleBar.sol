@@ -20,7 +20,7 @@ contract SicleBar is ERC20("SicleBar", "xSICLE"){
 
     // Enter the bar. Pay some SICLEs. Earn some shares.
     // Locks Sicle and mints xSicle
-    function enter(uint256 _amount) public {
+    function enter(uint256 _amount) external {
         // Gets the amount of Sicle locked in the contract
         uint256 totalSicle = sicle.balanceOf(address(this));
         // Gets the amount of xSicle in existence
@@ -40,7 +40,7 @@ contract SicleBar is ERC20("SicleBar", "xSICLE"){
 
     // Leave the bar. Claim back your SICLEs.
     // Unlocks the staked + gained Sicle and burns xSicle
-    function leave(uint256 _share) public {
+    function leave(uint256 _share) external {
         // Gets the amount of xSicle in existence
         uint256 totalShares = totalSupply();
         // Calculates the amount of Sicle the xSicle is worth

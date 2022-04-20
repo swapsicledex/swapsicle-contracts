@@ -27,7 +27,7 @@ contract Ownable is OwnableData {
 
     // F1 - F9: OK
     // C1 - C21: OK
-    function transferOwnership(address newOwner, bool direct, bool renounce) public onlyOwner {
+    function transferOwnership(address newOwner, bool direct, bool renounce) external onlyOwner {
         if (direct) {
             // Checks
             require(newOwner != address(0) || renounce, "Ownable: zero address");
@@ -37,13 +37,14 @@ contract Ownable is OwnableData {
             owner = newOwner;
         } else {
             // Effects
+            require(newOwner != address(0), "Ownable: zero address");
             pendingOwner = newOwner;
         }
     }
 
     // F1 - F9: OK
     // C1 - C21: OK
-    function claimOwnership() public {
+    function claimOwnership() external {
         address _pendingOwner = pendingOwner;
 
         // Checks
