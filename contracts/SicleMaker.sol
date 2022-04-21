@@ -53,7 +53,7 @@ contract SicleMaker is Ownable {
         address _sicle,
         address _weth
     ) public {
-        require(_factory != address(0) || _bar != address(0) || _sicle != address(0) || _weth != address(0) , "SicleMaker: zero address");
+        require(_factory != address(0) && _bar != address(0) && _sicle != address(0) && _weth != address(0) , "SicleMaker: zero address");
         factory = IUniswapV2Factory(_factory);
         bar = _bar;
         sicle = _sicle;
