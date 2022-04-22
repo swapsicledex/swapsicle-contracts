@@ -13,7 +13,7 @@ contract Migrator {
     uint256 public notBeforeBlock;
     uint256 public desiredLiquidity = uint256(-1);
 
-    event migrate(IUniswapV2Pair orig);
+    event Migrate(IUniswapV2Pair orig);
 
     constructor(
         address _chef,
@@ -21,7 +21,7 @@ contract Migrator {
         IUniswapV2Factory _factory,
         uint256 _notBeforeBlock
     ) public {
-        require(_chef != address(0) && _oldFactory != address(0) && _factory != address(0), "Migrator: zero address");
+        require(_chef != address(0) && _oldFactory != address(0) && address(_factory) != address(0), "Migrator: zero address");
         chef = _chef;
         oldFactory = _oldFactory;
         factory = _factory;
@@ -45,7 +45,7 @@ contract Migrator {
         orig.burn(address(pair));
         pair.mint(msg.sender);
         desiredLiquidity = uint256(-1);
-        emit migrate(orig);
+        emit Migrate(orig);
         return pair;
     }
 }
