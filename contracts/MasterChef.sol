@@ -139,6 +139,7 @@ contract MasterChef is Ownable {
         uint256 _allocPoint,
         bool _withUpdate
     ) external onlyOwner {
+        require(_pid < poolInfo.length, "invalid _pid");
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -157,6 +158,7 @@ contract MasterChef is Ownable {
 
     // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
     function migrate(uint256 _pid) public {
+        require(_pid < poolInfo.length, "invalid _pid");
         require(address(migrator) != address(0), "migrate: no migrator");
         PoolInfo storage pool = poolInfo[_pid];
         IERC20 lpToken = pool.lpToken;
@@ -191,6 +193,7 @@ contract MasterChef is Ownable {
         view
         returns (uint256)
     {
+        require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accSiclePerShare = pool.accSiclePerShare;
@@ -219,6 +222,7 @@ contract MasterChef is Ownable {
 
     // Update reward variables of the given pool to be up-to-date.
     function updatePool(uint256 _pid) public {
+        require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         if (block.number <= pool.lastRewardBlock) {
             return;
@@ -243,6 +247,7 @@ contract MasterChef is Ownable {
 
     // Deposit LP tokens to MasterChef for SICLE allocation.
     function deposit(uint256 _pid, uint256 _amount) external {
+        require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
@@ -265,6 +270,7 @@ contract MasterChef is Ownable {
 
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _pid, uint256 _amount) external {
+        require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
@@ -282,6 +288,7 @@ contract MasterChef is Ownable {
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw(uint256 _pid) external {
+        require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         uint256 amount = user.amount;
