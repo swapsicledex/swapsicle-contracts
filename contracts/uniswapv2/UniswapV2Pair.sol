@@ -126,7 +126,9 @@ contract UniswapV2Pair is UniswapV2ERC20 {
     // if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
     function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
         address feeTo = IUniswapV2Factory(factory).feeTo();
+        address feeToStake = IUniswapV2Factory(factory).feeToStake();
         feeOn = feeTo != address(0);
+        bool feeOnStake = feeToStake != address(0);
         uint _kLast = kLast; // gas savings
         if (feeOn) {
             if (_kLast != 0) {
@@ -134,9 +136,20 @@ contract UniswapV2Pair is UniswapV2ERC20 {
                 uint rootKLast = Math.sqrt(_kLast);
                 if (rootK > rootKLast) {
                     uint numerator = totalSupply.mul(rootK.sub(rootKLast));
-                    uint denominator = rootK.mul(5).add(rootKLast);
+                    uint denominator = rootK.mul(17).div(3).add(rootKLast);
                     uint liquidity = numerator / denominator;
                     if (liquidity > 0) _mint(feeTo, liquidity);
+                }
+            }
+        } else if(feeOnStake) {
+            if (_kLast != 0) {
+                uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
+                uint rootKLast = Math.sqrt(_kLast);
+                if (rootK > rootKLast) {
+                    uint numerator1 = totalSupply.mul(rootK.sub(rootKLast));
+                    uint denominator1 = rootK.mul(349).div(51).add(rootKLast);
+                    uint liquidity1 = numerator1 / denominator1;
+                    if (liquidity1 > 0) _mint(feeToStake, liquidity1);
                 }
             }
         } else if (_kLast != 0) {
