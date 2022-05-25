@@ -7,25 +7,25 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./SicleToken.sol";
+import "./POPSToken.sol";
 
 interface IMigratorChef {
-    // Perform LP token migration from legacy UniswapV2 to SwapSicle.
+    // Perform LP token migration from legacy UniswapV2 to SwapPops.
     // Take the current LP token address and return the new LP token address.
     // Migrator should have full access to the caller's LP token.
     // Return the new LP token address.
     //
     // XXX Migrator must have allowance access to UniswapV2 LP tokens.
-    // SwapSicle must mint EXACTLY the same amount of SwapSicle LP tokens or
+    // SwapPops must mint EXACTLY the same amount of SwapPops LP tokens or
     // else something bad will happen. Traditional UniswapV2 does not
     // do that so be careful!
     function migrate(IERC20 token) external returns (IERC20);
 }
 
-// MasterChef is the master of Sicle. He can make Sicle and he is a fair guy.
+// MasterChef is the master of Pops. He can make Pops and he is a fair guy.
 //
 // Note that it's ownable and the owner wields tremendous power. The ownership
-// will be transferred to a governance smart contract once SICLE is sufficiently
+// will be transferred to a governance smart contract once POPS is sufficiently
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
@@ -37,13 +37,13 @@ contract MasterChef is Ownable {
         uint256 amount; // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
         //
-        // We do some fancy math here. Basically, any point in time, the amount of SICLEs
+        // We do some fancy math here. Basically, any point in time, the amount of POPSs
         // entitled to a user but is pending to be distributed is:
         //
-        //   pending reward = (user.amount * pool.accSiclePerShare) - user.rewardDebt
+        //   pending reward = (user.amount * pool.accPopsPerShare) - user.rewardDebt
         //
         // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-        //   1. The pool's `accSiclePerShare` (and `lastRewardBlock`) gets updated.
+        //   1. The pool's `accPopsPerShare` (and `lastRewardBlock`) gets updated.
         //   2. User receives the pending reward sent to his/her address.
         //   3. User's `amount` gets updated.
         //   4. User's `rewardDebt` gets updated.
@@ -51,19 +51,19 @@ contract MasterChef is Ownable {
     // Info of each pool.
     struct PoolInfo {
         IERC20 lpToken; // Address of LP token contract.
-        uint256 allocPoint; // How many allocation points assigned to this pool. SICLEs to distribute per block.
-        uint256 lastRewardBlock; // Last block number that SICLEs distribution occurs.
-        uint256 accSiclePerShare; // Accumulated SICLEs per share, times 1e12. See below.
+        uint256 allocPoint; // How many allocation points assigned to this pool. POPSs to distribute per block.
+        uint256 lastRewardBlock; // Last block number that POPSs distribution occurs.
+        uint256 accPopsPerShare; // Accumulated POPSs per share, times 1e12. See below.
     }
-    // The SICLE TOKEN!
-    SicleToken public sicle;
+    // The POPS TOKEN!
+    POPSToken public pops;
     // Dev address.
     address public devaddr;
-    // Block number when bonus SICLE period ends.
+    // Block number when bonus POPS period ends.
     uint256 public bonusEndBlock;
-    // SICLE tokens created per block.
-    uint256 public siclePerBlock;
-    // Bonus muliplier for early sicle makers.
+    // POPS tokens created per block.
+    uint256 public popsPerBlock;
+    // Bonus muliplier for early pops makers.
     uint256 public constant BONUS_MULTIPLIER = 10;
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     IMigratorChef public migrator;
@@ -75,7 +75,7 @@ contract MasterChef is Ownable {
     mapping(address => bool) public lpCheck;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
-    // The block number when SICLE mining starts.
+    // The block number when POPS mining starts.
     uint256 public startBlock;
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -90,15 +90,15 @@ contract MasterChef is Ownable {
     event DevAddress(address indexed _devaddr);
 
     constructor(
-        SicleToken _sicle,
+        POPSToken _pops,
         address _devaddr,
-        uint256 _siclePerBlock,
+        uint256 _popsPerBlock,
         uint256 _startBlock,
         uint256 _bonusEndBlock
     ) public {
-        sicle = _sicle;
+        pops = _pops;
         devaddr = _devaddr;
-        siclePerBlock = _siclePerBlock;
+        popsPerBlock = _popsPerBlock;
         bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
     }
@@ -114,7 +114,7 @@ contract MasterChef is Ownable {
         IERC20 _lpToken,
         bool _withUpdate
     ) external onlyOwner {
-        require(lpCheck[_lpToken] != true, "MasterChef: LP already added");
+        require(lpCheck[address(_lpToken)] != true, "MasterChef: LP already added");
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -126,14 +126,14 @@ contract MasterChef is Ownable {
                 lpToken: _lpToken,
                 allocPoint: _allocPoint,
                 lastRewardBlock: lastRewardBlock,
-                accSiclePerShare: 0
+                accPopsPerShare: 0
             })
         );
-        lpCheck[_lpToken] = true;
-        emit LpAdded(_allocPoint, _lptoken);
+        lpCheck[address(_lpToken)] = true;
+        emit LpAdded(_allocPoint, address(_lpToken));
     }
 
-    // Update the given pool's SICLE allocation point. Can only be called by the owner.
+    // Update the given pool's POPS allocation point. Can only be called by the owner.
     function set(
         uint256 _pid,
         uint256 _allocPoint,
@@ -147,13 +147,13 @@ contract MasterChef is Ownable {
             _allocPoint
         );
         poolInfo[_pid].allocPoint = _allocPoint;
-        emit UpdateAlloc(_pid, allocPoint, _withUpdate);
+        emit UpdateAlloc(_pid, _allocPoint, _withUpdate);
     }
 
     // Set the migrator contract. Can only be called by the owner.
     function setMigrator(IMigratorChef _migrator) external onlyOwner {
         migrator = _migrator;
-        emit MigratorSet(_migrator);
+        emit MigratorSet(address(_migrator));
     }
 
     // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
@@ -187,8 +187,8 @@ contract MasterChef is Ownable {
         }
     }
 
-    // View function to see pending SICLEs on frontend.
-    function pendingSicle(uint256 _pid, address _user)
+    // View function to see pending POPSs on frontend.
+    function pendingPops(uint256 _pid, address _user)
         external
         view
         returns (uint256)
@@ -196,20 +196,20 @@ contract MasterChef is Ownable {
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
-        uint256 accSiclePerShare = pool.accSiclePerShare;
+        uint256 accPopsPerShare = pool.accPopsPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier =
                 getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 sicleReward =
-                multiplier.mul(siclePerBlock).mul(pool.allocPoint).div(
+            uint256 popsReward =
+                multiplier.mul(popsPerBlock).mul(pool.allocPoint).div(
                     totalAllocPoint
                 );
-            accSiclePerShare = accSiclePerShare.add(
-                sicleReward.mul(1e12).div(lpSupply)
+            accPopsPerShare = accPopsPerShare.add(
+                popsReward.mul(1e12).div(lpSupply)
             );
         }
-        return user.amount.mul(accSiclePerShare).div(1e12).sub(user.rewardDebt);
+        return user.amount.mul(accPopsPerShare).div(1e12).sub(user.rewardDebt);
     }
 
     // Update reward vairables for all pools. Be careful of gas spending!
@@ -233,19 +233,19 @@ contract MasterChef is Ownable {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 sicleReward =
-            multiplier.mul(siclePerBlock).mul(pool.allocPoint).div(
+        uint256 popsReward =
+            multiplier.mul(popsPerBlock).mul(pool.allocPoint).div(
                 totalAllocPoint
             );
-        sicle.mint(devaddr, sicleReward.div(10));
-        sicle.mint(address(this), sicleReward);
-        pool.accSiclePerShare = pool.accSiclePerShare.add(
-            sicleReward.mul(1e12).div(lpSupply)
+        pops.mint(devaddr, popsReward.div(10));
+        pops.mint(address(this), popsReward);
+        pool.accPopsPerShare = pool.accPopsPerShare.add(
+            popsReward.mul(1e12).div(lpSupply)
         );
         pool.lastRewardBlock = block.number;
     }
 
-    // Deposit LP tokens to MasterChef for SICLE allocation.
+    // Deposit LP tokens to MasterChef for POPS allocation.
     function deposit(uint256 _pid, uint256 _amount) external {
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
@@ -253,10 +253,10 @@ contract MasterChef is Ownable {
         updatePool(_pid);
         if (user.amount > 0) {
             uint256 pending =
-                user.amount.mul(pool.accSiclePerShare).div(1e12).sub(
+                user.amount.mul(pool.accPopsPerShare).div(1e12).sub(
                     user.rewardDebt
                 );
-            safeSicleTransfer(msg.sender, pending);
+            safePopsTransfer(msg.sender, pending);
         }
         pool.lpToken.safeTransferFrom(
             address(msg.sender),
@@ -264,7 +264,7 @@ contract MasterChef is Ownable {
             _amount
         );
         user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.mul(pool.accSiclePerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accPopsPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -276,12 +276,12 @@ contract MasterChef is Ownable {
         require(user.amount >= _amount, "withdraw: not good");
         updatePool(_pid);
         uint256 pending =
-            user.amount.mul(pool.accSiclePerShare).div(1e12).sub(
+            user.amount.mul(pool.accPopsPerShare).div(1e12).sub(
                 user.rewardDebt
             );
-        safeSicleTransfer(msg.sender, pending);
+        safePopsTransfer(msg.sender, pending);
         user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.mul(pool.accSiclePerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accPopsPerShare).div(1e12);
         pool.lpToken.safeTransfer(address(msg.sender), _amount);
         emit Withdraw(msg.sender, _pid, _amount);
     }
@@ -298,13 +298,13 @@ contract MasterChef is Ownable {
         pool.lpToken.safeTransfer(address(msg.sender), amount);
     }
 
-    // Safe sicle transfer function, just in case if rounding error causes pool to not have enough SICLEs.
-    function safeSicleTransfer(address _to, uint256 _amount) internal {
-        uint256 sicleBal = sicle.balanceOf(address(this));
-        if (_amount > sicleBal) {
-            sicle.transfer(_to, sicleBal);
+    // Safe pops transfer function, just in case if rounding error causes pool to not have enough POPSs.
+    function safePopsTransfer(address _to, uint256 _amount) internal {
+        uint256 popsBal = pops.balanceOf(address(this));
+        if (_amount > popsBal) {
+            pops.transfer(_to, popsBal);
         } else {
-            sicle.transfer(_to, _amount);
+            pops.transfer(_to, _amount);
         }
     }
 
