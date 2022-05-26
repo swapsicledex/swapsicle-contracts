@@ -2,23 +2,23 @@
 
 pragma solidity 0.6.12;
 
-import "./uniswapv2/interfaces/IUniswapV2Pair.sol";
-import "./uniswapv2/interfaces/IUniswapV2Factory.sol";
+import "./sicle/interfaces/ISiclePair.sol";
+import "./sicle/interfaces/ISicleFactory.sol";
 
 
 contract Migrator {
     address public chef;
     address public oldFactory;
-    IUniswapV2Factory public factory;
+    ISicleFactory public factory;
     uint256 public notBeforeBlock;
     uint256 public desiredLiquidity = uint256(-1);
 
-    event Migrate(IUniswapV2Pair orig);
+    event Migrate(ISiclePair orig);
 
     constructor(
         address _chef,
         address _oldFactory,
-        IUniswapV2Factory _factory,
+        ISicleFactory _factory,
         uint256 _notBeforeBlock
     ) public {
         require(_chef != address(0) && _oldFactory != address(0) && address(_factory) != address(0), "Migrator: zero address");
@@ -28,15 +28,15 @@ contract Migrator {
         notBeforeBlock = _notBeforeBlock;
     }
 
-    function migrate(IUniswapV2Pair orig) external returns (IUniswapV2Pair) {
+    function migrate(ISiclePair orig) external returns (ISiclePair) {
         require(msg.sender == chef, "not from master chef");
         require(block.number >= notBeforeBlock, "too early to migrate");
         require(orig.factory() == oldFactory, "not from old factory");
         address token0 = orig.token0();
         address token1 = orig.token1();
-        IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token0, token1));
-        if (pair == IUniswapV2Pair(address(0))) {
-            pair = IUniswapV2Pair(factory.createPair(token0, token1));
+        ISiclePair pair = ISiclePair(factory.getPair(token0, token1));
+        if (pair == ISiclePair(address(0))) {
+            pair = ISiclePair(factory.createPair(token0, token1));
         }
         uint256 lp = orig.balanceOf(msg.sender);
         if (lp == 0) return pair;

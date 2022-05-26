@@ -5,9 +5,9 @@ pragma solidity 0.6.12;
 import "./libraries/SafeMath.sol";
 import "./libraries/SafeERC20.sol";
 
-import "./uniswapv2/interfaces/IUniswapV2ERC20.sol";
-import "./uniswapv2/interfaces/IUniswapV2Pair.sol";
-import "./uniswapv2/interfaces/IUniswapV2Factory.sol";
+import "./sicle/interfaces/ISicleERC20.sol";
+import "./sicle/interfaces/ISiclePair.sol";
+import "./sicle/interfaces/ISicleFactory.sol";
 
 import "./Ownable.sol";
 
@@ -20,13 +20,13 @@ contract SicleMaker is Ownable {
     using SafeERC20 for IERC20;
 
     // V1 - V5: OK
-    IUniswapV2Factory public immutable factory;
+    ISicleFactory public immutable factory;
     //0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac
     // V1 - V5: OK
     address public immutable bar;
     //0x8798249c2E607446EfB7Ad49eC89dD1865Ff4272
     // V1 - V5: OK
-    address private immutable sicle;
+    address private immutable pops;
     //0x6B3595068778DD592e39A122f4f5a5cF09C90fE2
     // V1 - V5: OK
     address private immutable weth;
@@ -44,19 +44,19 @@ contract SicleMaker is Ownable {
         address indexed token1,
         uint256 amount0,
         uint256 amount1,
-        uint256 amountSUSHI
+        uint256 amountPOPS
     );
 
     constructor(
         address _factory,
         address _bar,
-        address _sicle,
+        address _pops,
         address _weth
     ) public {
-        require(_factory != address(0) && _bar != address(0) && _sicle != address(0) && _weth != address(0) , "SicleMaker: zero address");
-        factory = IUniswapV2Factory(_factory);
+        require(_factory != address(0) && _bar != address(0) && _pops != address(0) && _weth != address(0) , "SicleMaker: zero address");
+        factory = ISicleFactory(_factory);
         bar = _bar;
-        sicle = _sicle;
+        pops = _pops;
         weth = _weth;
     }
 
@@ -74,7 +74,7 @@ contract SicleMaker is Ownable {
     function setBridge(address token, address bridge) external onlyOwner {
         // Checks
         require(
-            token != sicle && token != weth && token != bridge,
+            token != pops && token != weth && token != bridge,
             "SicleMaker: Invalid bridge"
         );
 
@@ -94,7 +94,7 @@ contract SicleMaker is Ownable {
 
     // F1 - F10: OK
     // F3: _convert is separate to save gas by only checking the 'onlyEOA' modifier once in case of convertMultiple
-    // F6: There is an exploit to add lots of SUSHI to the bar, run convert, then remove the SUSHI again.
+    // F6: There is an exploit to add lots of POPS to the bar, run convert, then remove the POPS again.
     //     As the size of the SicleBar has grown, this requires large amounts of funds and isn't super profitable anymore
     //     The onlyEOA modifier prevents this being done with a flash loan.
     // C1 - C24: OK
@@ -121,7 +121,7 @@ contract SicleMaker is Ownable {
     function _convert(address token0, address token1) internal {
         // Interactions
         // S1 - S4: OK
-        IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token0, token1));
+        ISiclePair pair = ISiclePair(factory.getPair(token0, token1));
         require(address(pair) != address(0), "SicleMaker: Invalid pair");
         // balanceOf: S1 - S4: OK
         // transfer: X1 - X5: OK
@@ -146,43 +146,43 @@ contract SicleMaker is Ownable {
 
     // F1 - F10: OK
     // C1 - C24: OK
-    // All safeTransfer, _swap, _toSUSHI, _convertStep: X1 - X5: OK
+    // All safeTransfer, _swap, _toPOPS, _convertStep: X1 - X5: OK
     function _convertStep(
         address token0,
         address token1,
         uint256 amount0,
         uint256 amount1
-    ) internal returns (uint256 sicleOut) {
+    ) internal returns (uint256 popsOut) {
         // Interactions
         if (token0 == token1) {
             uint256 amount = amount0.add(amount1);
-            if (token0 == sicle) {
-                IERC20(sicle).safeTransfer(bar, amount);
-                sicleOut = amount;
+            if (token0 == pops) {
+                IERC20(pops).safeTransfer(bar, amount);
+                popsOut = amount;
             } else if (token0 == weth) {
-                sicleOut = _toSUSHI(weth, amount);
+                popsOut = _toPOPS(weth, amount);
             } else {
                 address bridge = bridgeFor(token0);
                 amount = _swap(token0, bridge, amount, address(this));
-                sicleOut = _convertStep(bridge, bridge, amount, 0);
+                popsOut = _convertStep(bridge, bridge, amount, 0);
             }
-        } else if (token0 == sicle) {
-            // eg. SUSHI - ETH
-            IERC20(sicle).safeTransfer(bar, amount0);
-            sicleOut = _toSUSHI(token1, amount1).add(amount0);
-        } else if (token1 == sicle) {
-            // eg. USDT - SUSHI
-            IERC20(sicle).safeTransfer(bar, amount1);
-            sicleOut = _toSUSHI(token0, amount0).add(amount1);
+        } else if (token0 == pops) {
+            // eg. POPS - ETH
+            IERC20(pops).safeTransfer(bar, amount0);
+            popsOut = _toPOPS(token1, amount1).add(amount0);
+        } else if (token1 == pops) {
+            // eg. USDT - POPS
+            IERC20(pops).safeTransfer(bar, amount1);
+            popsOut = _toPOPS(token0, amount0).add(amount1);
         } else if (token0 == weth) {
             // eg. ETH - USDC
-            sicleOut = _toSUSHI(
+            popsOut = _toPOPS(
                 weth,
                 _swap(token1, weth, amount1, address(this)).add(amount0)
             );
         } else if (token1 == weth) {
             // eg. USDT - ETH
-            sicleOut = _toSUSHI(
+            popsOut = _toPOPS(
                 weth,
                 _swap(token0, weth, amount0, address(this)).add(amount1)
             );
@@ -192,7 +192,7 @@ contract SicleMaker is Ownable {
             address bridge1 = bridgeFor(token1);
             if (bridge0 == token1) {
                 // eg. MIC - USDT - and bridgeFor(MIC) = USDT
-                sicleOut = _convertStep(
+                popsOut = _convertStep(
                     bridge0,
                     token1,
                     _swap(token0, bridge0, amount0, address(this)),
@@ -200,14 +200,14 @@ contract SicleMaker is Ownable {
                 );
             } else if (bridge1 == token0) {
                 // eg. WBTC - DSD - and bridgeFor(DSD) = WBTC
-                sicleOut = _convertStep(
+                popsOut = _convertStep(
                     token0,
                     bridge1,
                     amount0,
                     _swap(token1, bridge1, amount1, address(this))
                 );
             } else {
-                sicleOut = _convertStep(
+                popsOut = _convertStep(
                     bridge0,
                     bridge1, // eg. USDT - DSD - and bridgeFor(DSD) = WBTC
                     _swap(token0, bridge0, amount0, address(this)),
@@ -228,8 +228,8 @@ contract SicleMaker is Ownable {
     ) internal returns (uint256 amountOut) {
         // Checks
         // X1 - X5: OK
-        IUniswapV2Pair pair =
-            IUniswapV2Pair(factory.getPair(fromToken, toToken));
+        ISiclePair pair =
+            ISiclePair(factory.getPair(fromToken, toToken));
         require(address(pair) != address(0), "SicleMaker: Cannot convert");
 
         // Interactions
@@ -255,11 +255,11 @@ contract SicleMaker is Ownable {
 
     // F1 - F10: OK
     // C1 - C24: OK
-    function _toSUSHI(address token, uint256 amountIn)
+    function _toPOPS(address token, uint256 amountIn)
         internal
         returns (uint256 amountOut)
     {
         // X1 - X5: OK
-        amountOut = _swap(token, sicle, amountIn, bar);
+        amountOut = _swap(token, pops, amountIn, bar);
     }
 }
