@@ -7,20 +7,8 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./POPSToken.sol";
-
-interface IMigratorChef {
-    // Perform LP token migration from legacy Sicle to SwapPops.
-    // Take the current LP token address and return the new LP token address.
-    // Migrator should have full access to the caller's LP token.
-    // Return the new LP token address.
-    //
-    // XXX Migrator must have allowance access to Sicle LP tokens.
-    // SwapPops must mint EXACTLY the same amount of SwapPops LP tokens or
-    // else something bad will happen. Traditional Sicle does not
-    // do that so be careful!
-    function migrate(IERC20 token) external returns (IERC20);
-}
 
 // MasterChef is the master of Pops. He can make Pops and he is a fair guy.
 //
@@ -29,7 +17,7 @@ interface IMigratorChef {
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
-contract MasterChef is Ownable {
+contract MasterChef is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     // Info of each user.
@@ -65,29 +53,23 @@ contract MasterChef is Ownable {
     uint256 public popsPerBlock;
     // Bonus muliplier for early pops makers.
     uint256 public constant BONUS_MULTIPLIER = 10;
-    // The migrator contract. It has a lot of power. Can only be set through governance (owner).
-    IMigratorChef public migrator;
     // Info of each pool.
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
-    // Info on lptoken
-    mapping(address => bool) public lpCheck;
+    // Indicates if a pool was added
+    mapping(address => bool) public existingPools;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
     // The block number when POPS mining starts.
     uint256 public startBlock;
+
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event EmergencyWithdraw(
-        address indexed user,
-        uint256 indexed pid,
-        uint256 amount
-    );
-    event LpAdded(uint256 _allocPoint, address indexed _lptoken);
+    event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+    event AddPool(uint256 _pid, uint256 _allocPoint, address indexed _lptoken);
     event UpdateAlloc(uint256 _pid, uint256 allocPoint, bool _withUpdate);
-    event MigratorSet(address indexed _migrator);
-    event DevAddress(address indexed _devaddr);
+    event UpdateDevAddress(address indexed _devaddr);
 
     constructor(
         POPSToken _pops,
@@ -108,13 +90,12 @@ contract MasterChef is Ownable {
     }
 
     // Add a new lp to the pool. Can only be called by the owner.
-    // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     function add(
         uint256 _allocPoint,
         IERC20 _lpToken,
         bool _withUpdate
     ) external onlyOwner {
-        require(lpCheck[address(_lpToken)] != true, "MasterChef: LP already added");
+        require(existingPools[address(_lpToken)] != true, "MasterChef: LP already added");
         if (_withUpdate) {
             massUpdatePools();
         }
@@ -129,8 +110,8 @@ contract MasterChef is Ownable {
                 accPopsPerShare: 0
             })
         );
-        lpCheck[address(_lpToken)] = true;
-        emit LpAdded(_allocPoint, address(_lpToken));
+        existingPools[address(_lpToken)] = true;
+        emit AddPool(poolInfo.length - 1, _allocPoint, address(_lpToken));
     }
 
     // Update the given pool's POPS allocation point. Can only be called by the owner.
@@ -148,25 +129,6 @@ contract MasterChef is Ownable {
         );
         poolInfo[_pid].allocPoint = _allocPoint;
         emit UpdateAlloc(_pid, _allocPoint, _withUpdate);
-    }
-
-    // Set the migrator contract. Can only be called by the owner.
-    function setMigrator(IMigratorChef _migrator) external onlyOwner {
-        migrator = _migrator;
-        emit MigratorSet(address(_migrator));
-    }
-
-    // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
-    function migrate(uint256 _pid) public {
-        require(_pid < poolInfo.length, "invalid _pid");
-        require(address(migrator) != address(0), "migrate: no migrator");
-        PoolInfo storage pool = poolInfo[_pid];
-        IERC20 lpToken = pool.lpToken;
-        uint256 bal = lpToken.balanceOf(address(this));
-        lpToken.safeApprove(address(migrator), bal);
-        IERC20 newLpToken = migrator.migrate(lpToken);
-        require(bal == newLpToken.balanceOf(address(this)), "migrate: bad");
-        pool.lpToken = newLpToken;
     }
 
     // Return reward multiplier over the given _from to _to block.
@@ -287,7 +249,7 @@ contract MasterChef is Ownable {
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
-    function emergencyWithdraw(uint256 _pid) external {
+    function emergencyWithdraw(uint256 _pid) nonReentrant external {
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -312,6 +274,6 @@ contract MasterChef is Ownable {
     function dev(address _devaddr) external {
         require(msg.sender == devaddr, "dev: wut?");
         devaddr = _devaddr;
-        emit DevAddress(_devaddr);
+        emit UpdateDevAddress(_devaddr);
     }
 }

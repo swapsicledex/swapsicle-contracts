@@ -11,11 +11,11 @@ import "./sicle/interfaces/ISicleFactory.sol";
 
 import "./Ownable.sol";
 
-// SicleMaker is MasterChef's left hand and kinda a wizard. He can cook up Sicle from pretty much anything!
+// IceCreamVan is MasterChef's left hand and kinda a wizard. He can cook up Sicle from pretty much anything!
 // This contract handles "serving up" rewards for xSicle holders by trading tokens collected from fees for Sicle.
 
 // T1 - T4: OK
-contract SicleMaker is Ownable {
+contract IceCreamVan is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
