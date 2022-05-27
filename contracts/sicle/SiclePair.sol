@@ -46,6 +46,7 @@ interface IMigrator {
     function desiredLiquidity() external view returns (uint256);
 }
 
+//UniswapV2Pair
 contract SiclePair is SicleERC20 {
     using SafeMathSicle  for uint;
     using UQ112x112 for uint224;

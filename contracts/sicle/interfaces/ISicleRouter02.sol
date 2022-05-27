@@ -4,7 +4,8 @@ pragma solidity >=0.6.2;
 
 import './ISicleRouter01.sol';
 
-interface ISicleRouter is ISicleRouter01 {
+//IUniswapV2Router02
+interface ISicleRouter02 is ISicleRouter01 {
     function removeLiquidityETHSupportingFeeOnTransferTokens(
         address token,
         uint liquidity,

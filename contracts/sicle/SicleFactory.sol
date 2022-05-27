@@ -5,6 +5,7 @@ pragma solidity =0.6.12;
 import './interfaces/ISicleFactory.sol';
 import './SiclePair.sol';
 
+//UniswapV2Factory
 contract SicleFactory is ISicleFactory {
     address public override feeTo;
     address public override feeToStake;

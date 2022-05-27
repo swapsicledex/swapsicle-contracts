@@ -4,6 +4,7 @@ pragma solidity =0.6.12;
 
 import './libraries/SafeMath.sol';
 
+//UniswapV2ERC20
 contract SicleERC20 {
     using SafeMathSicle for uint;
 

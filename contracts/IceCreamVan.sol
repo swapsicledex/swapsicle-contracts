@@ -15,6 +15,7 @@ import "./Ownable.sol";
 // This contract handles "serving up" rewards for xSicle holders by trading tokens collected from fees for Sicle.
 
 // T1 - T4: OK
+// SushiMaker
 contract IceCreamVan is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -95,7 +96,7 @@ contract IceCreamVan is Ownable {
     // F1 - F10: OK
     // F3: _convert is separate to save gas by only checking the 'onlyEOA' modifier once in case of convertMultiple
     // F6: There is an exploit to add lots of POPS to the bar, run convert, then remove the POPS again.
-    //     As the size of the SicleBar has grown, this requires large amounts of funds and isn't super profitable anymore
+    //     As the size of the POPSBar has grown, this requires large amounts of funds and isn't super profitable anymore
     //     The onlyEOA modifier prevents this being done with a flash loan.
     // C1 - C24: OK
     function convert(address token0, address token1) external onlyEOA() {

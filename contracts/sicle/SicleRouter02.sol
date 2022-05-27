@@ -10,7 +10,8 @@ import './interfaces/ISicleFactory.sol';
 import './interfaces/IERC20.sol';
 import './interfaces/IWETH.sol';
 
-contract SicleRouter is ISicleRouter {
+//UniswapV2Router02
+contract SicleRouter02 is ISicleRouter02 {
     using SafeMathSicle for uint;
 
     address public immutable override factory;
