@@ -11,7 +11,9 @@ const {
   BSC_URL,
   POLY_URL,
   BSC_API_KEY,
-  BSC_URL_TESTNET
+  BSC_URL_TESTNET,
+  MM_SS_DEPLOYER,
+  AVALANCHE_API_KEY
 } = process.env;
 module.exports = {
   solidity: {
@@ -54,19 +56,21 @@ module.exports = {
     bscTestnet: {
       url: BSC_URL_TESTNET,
       accounts: [`0x${METAMASK_PRIVATE_KEY_ACCT1}`],
-    }   
+    },
+    avalanche: {
+      url: "https://api.avax.network/ext/bc/C/rpc",
+      accounts: [MM_SS_DEPLOYER],
+    },     
   },
   etherscan: {
-    // Your API key for Etherscan
-    // Obtain one at https://etherscan.io/
-    //eth: { 
-    //  apiKey: ETH_API_KEY 
-    //}
-//    bsc: {
-      apiKey: BSC_API_KEY
-//    },
-//    poly: {
-//      apiKey: POLY_API_KEY
-//    }
+    apiKey: {
+      //eth: ETH_API_KEY,
+      //bsc: BSC_API_KEY,
+      //poly: POLY_API_KEY,
+      //apiKey: ETH_API_KEY, //eth
+      //rinkeby: ETH_API_KEY
+      //bscTestnet: BSC_API_KEY,
+      avalanche: AVALANCHE_API_KEY
+    }
   }  
 };

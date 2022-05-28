@@ -59,10 +59,12 @@ contract MasterChef is Ownable, ReentrancyGuard {
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Indicates if a pool was added
     mapping(address => bool) public existingPools;
-    // Total allocation poitns. Must be the sum of all allocation points in all pools.
+    // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
     // The block number when POPS mining starts.
     uint256 public startBlock;
+    // The block number when POPS mining ends.
+    uint256 public endBlock;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -76,13 +78,16 @@ contract MasterChef is Ownable, ReentrancyGuard {
         address _devaddr,
         uint256 _popsPerBlock,
         uint256 _startBlock,
+        uint256 _endBlock,
         uint256 _bonusEndBlock
     ) public {
+        require(_bonusEndBlock <= _endBlock, "MasterChef: _bonusEndBlock > _endBlock");
         pops = _pops;
         devaddr = _devaddr;
         popsPerBlock = _popsPerBlock;
         bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
+        endBlock = _endBlock;
     }
 
     function poolLength() external view returns (uint256) {
@@ -95,6 +100,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
         IERC20 _lpToken,
         bool _withUpdate
     ) external onlyOwner {
+        require(endBlock > block.number, "MasterChef: Mining ended");
         require(existingPools[address(_lpToken)] != true, "MasterChef: LP already added");
         if (_withUpdate) {
             massUpdatePools();
@@ -120,6 +126,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
         uint256 _allocPoint,
         bool _withUpdate
     ) external onlyOwner {
+        require(endBlock > block.number, "MasterChef: Mining ended");
         require(_pid < poolInfo.length, "invalid _pid");
         if (_withUpdate) {
             massUpdatePools();
@@ -137,12 +144,19 @@ contract MasterChef is Ownable, ReentrancyGuard {
         view
         returns (uint256)
     {
+        // set range to not exceed endBlock
+        if (_from > endBlock) return 0;
+        _to = _to > endBlock ? endBlock : _to;
+
         if (_to <= bonusEndBlock) {
+            // from and to within bonus period
             return _to.sub(_from).mul(BONUS_MULTIPLIER);
         } else if (_from >= bonusEndBlock) {
+            // past bonus period
             return _to.sub(_from);
         } else {
             return
+                // from less than bonus period to past end of bonus period
                 bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
                     _to.sub(bonusEndBlock)
                 );
@@ -160,8 +174,9 @@ contract MasterChef is Ownable, ReentrancyGuard {
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accPopsPerShare = pool.accPopsPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        if (block.number > pool.lastRewardBlock && lpSupply != 0) {
-            uint256 multiplier =
+        if (block.number > pool.lastRewardBlock && lpSupply != 0
+            && pool.lastRewardBlock < endBlock) {
+            uint256 multiplier = 
                 getMultiplier(pool.lastRewardBlock, block.number);
             uint256 popsReward =
                 multiplier.mul(popsPerBlock).mul(pool.allocPoint).div(
@@ -186,7 +201,7 @@ contract MasterChef is Ownable, ReentrancyGuard {
     function updatePool(uint256 _pid) public {
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
-        if (block.number <= pool.lastRewardBlock) {
+        if (block.number <= pool.lastRewardBlock || pool.lastRewardBlock >= endBlock) {
             return;
         }
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
@@ -204,11 +219,12 @@ contract MasterChef is Ownable, ReentrancyGuard {
         pool.accPopsPerShare = pool.accPopsPerShare.add(
             popsReward.mul(1e12).div(lpSupply)
         );
-        pool.lastRewardBlock = block.number;
+        pool.lastRewardBlock = block.number > endBlock ? endBlock : block.number;
     }
 
     // Deposit LP tokens to MasterChef for POPS allocation.
-    function deposit(uint256 _pid, uint256 _amount) external {
+    function deposit(uint256 _pid, uint256 _amount) external nonReentrant {
+        require(endBlock > block.number, "MasterChef: Mining ended");
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
@@ -220,18 +236,19 @@ contract MasterChef is Ownable, ReentrancyGuard {
                 );
             safePopsTransfer(msg.sender, pending);
         }
-        pool.lpToken.safeTransferFrom(
-            address(msg.sender),
-            address(this),
-            _amount
-        );
-        user.amount = user.amount.add(_amount);
+        if (_amount > 0) {
+            // modified to handle fee on transfer tokens
+            uint256 before = pool.lpToken.balanceOf(address(this));
+            pool.lpToken.safeTransferFrom(msg.sender, address(this), _amount);
+            _amount = pool.lpToken.balanceOf(address(this)).sub(before);
+            user.amount = user.amount.add(_amount);
+        }
         user.rewardDebt = user.amount.mul(pool.accPopsPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _pid, uint256 _amount) external {
+    function withdraw(uint256 _pid, uint256 _amount) external nonReentrant {
         require(_pid < poolInfo.length, "invalid _pid");
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
