@@ -11,8 +11,8 @@ import "./sicle/interfaces/ISicleFactory.sol";
 
 import "./Ownable.sol";
 
-// IceCreamVan is MasterChef's left hand and kinda a wizard. He can cook up Sicle from pretty much anything!
-// This contract handles "serving up" rewards for xSicle holders by trading tokens collected from fees for Sicle.
+// IceCreamVan is MasterChef's left hand and kinda a wizard. He can cook up POPS from pretty much anything!
+// This contract handles "serving up" rewards for sPOPS holders by trading tokens collected from fees for POPS.
 
 // T1 - T4: OK
 // SushiMaker

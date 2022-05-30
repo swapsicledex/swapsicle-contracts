@@ -125,6 +125,34 @@ contract SiclePair is SicleERC20 {
     }
 
     // if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
+/*     function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
+        address feeTo = ISicleFactory(factory).feeTo();
+        address feeToStake = ISicleFactory(factory).feeToStake();
+        feeOn = feeTo != address(0);
+        bool feeOnStake = feeToStake != address(0);
+        uint _kLast = kLast; // gas savings
+        if (feeOn || feeOnStake) {
+            if (_kLast == 0) return(feeOn);
+            uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
+            uint rootKLast = Math.sqrt(_kLast);
+            if (rootK <= rootKLast) return(feeOn);
+            uint numerator = totalSupply.mul(rootK.sub(rootKLast));
+            if (feeOn) {
+                uint denominator = (rootK.mul(17) / 3).add(rootKLast);
+                uint liquidity = numerator / denominator;
+                if (liquidity > 0) _mint(feeTo, liquidity);
+            }
+            if (feeOnStake) {
+                uint denominator = (rootK.mul(349)/ 51).add(rootKLast);
+                uint liquidity = numerator / denominator;
+                if (liquidity > 0) _mint(feeToStake, liquidity);
+            }
+        } else if (_kLast != 0) {
+            kLast = 0;
+        }        
+    } */
+
+    // if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
     function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
         address feeTo = ISicleFactory(factory).feeTo();
         address feeToStake = ISicleFactory(factory).feeToStake();
@@ -132,31 +160,34 @@ contract SiclePair is SicleERC20 {
         bool feeOnStake = feeToStake != address(0);
         uint _kLast = kLast; // gas savings
         if (feeOn) {
-            if (_kLast != 0) {
-                uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
-                uint rootKLast = Math.sqrt(_kLast);
-                if (rootK > rootKLast) {
-                    uint numerator = totalSupply.mul(rootK.sub(rootKLast));
-                    uint denominator = (rootK.mul(17) / 3).add(rootKLast);
-                    uint liquidity = numerator / denominator;
-                    if (liquidity > 0) _mint(feeTo, liquidity);
+            if (_kLast == 0) return feeOn;
+            uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
+            uint rootKLast = Math.sqrt(_kLast);
+            if (rootK > rootKLast) {
+                uint numerator = totalSupply.mul(rootK.sub(rootKLast));
+                uint denominator = (rootK.mul(17) / 3).add(rootKLast);
+                uint liquidity = numerator / denominator;
+                if (liquidity > 0) {
+                    _mint(feeTo, liquidity);
+                    emit MintFeeFeeTo(rootK, rootKLast, totalSupply, numerator, denominator, liquidity);
                 }
-            } else if(feeOnStake) {
-                if (_kLast != 0) {
-                    uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
-                    uint rootKLast = Math.sqrt(_kLast);
-                    if (rootK > rootKLast) {
-                        uint numerator1 = totalSupply.mul(rootK.sub(rootKLast));
-                        uint denominator1 = (rootK.mul(349)/ 51).add(rootKLast);
-                        uint liquidity1 = numerator1 / denominator1;
-                        if (liquidity1 > 0) _mint(feeToStake, liquidity1);
+
+                if(feeOnStake) {
+                    numerator = totalSupply.mul(rootK.sub(rootKLast));
+                    denominator = (rootK.mul(349)/ 51).add(rootKLast);
+                    liquidity = numerator / denominator;
+                    if (liquidity > 0) {
+                        _mint(feeToStake, liquidity);
+                        emit MintFeeFeeToStake(rootK, rootKLast, totalSupply, numerator, denominator, liquidity);
                     }
                 }
             }
         } else if (_kLast != 0) {
             kLast = 0;
         }
-    }
+    }    
+    event MintFeeFeeTo(uint rootK, uint rootKLast, uint totalSupply, uint numerator, uint denominator, uint liquidity);
+    event MintFeeFeeToStake(uint rootK, uint rootKLast, uint totalSupply, uint numerator, uint denominator, uint liquidity);
 
     // this low-level function should be called from a contract which performs important safety checks
     function mint(address to) external lock returns (uint liquidity) {

@@ -4,28 +4,26 @@ const { deployments, ethers } = require("hardhat");
 
 //**** DEPLOY FACTORY AND UPDATE INIT CODE HASH ****// 
 //**** IN /sicle/libraries/SicleLibrary.sol LN26. ****//
-//**** HASH IS RETRIEVED FROM DEPLOYED FACTOR IN ****//
+//**** HASH IS RETRIEVED FROM DEPLOYED FACTORY IN ****//
 //**** VALUE pairCodeHash ON SNOWTRACE ****/
+
+//**** SET sicleFactoryAddress BEFORE RUNNING ****/
 
 async function main() {
   const weth = "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7"; //WAVAX
-  const INITIAL_MINT = ethers.utils.parseEther("10000000");
-  const TOKENS_PER_BLOCK = ethers.utils.parseEther("1.3");
-  const feeAddress = "0xe14972e38d81791085C0651aabc201D654E723b6";
-  const START_BLOCK = 15292497;
-  const END_BLOCK = START_BLOCK + 15768000;
-  const BONUS_END_BLOCK = START_BLOCK;
+  const INITIAL_MINT = ethers.utils.parseEther("79501600");
   const tokenName = "PToken"; //POPSToken
   const tokenSymbol = "PT"; //POPS
+  const feeTo = "0x58334Ad2C84619bC1F9C61372FcA6D5EB787De64";
+  // SET FACTORY ADDRESS
+  const sicleFactoryAddress = "0xA22FFF80baEF689976C55dabb193becdf023B6B9";
+
   //verification
   const verify = true;
-  // SET FACTORY ADDRESS
-  const sicleFactoryAddress = "0xEe673452BD981966d4799c865a96e0b92A8d0E45";
-  const sicleRouterAddress = "0x0427B42bb6ae94B488dcf549B390A368F8F69058";
-  const popTokenAddress = "0xDD08a7996CCAb49c330d6C78ca6199b8399cC64f";
-  const popsBarAddress = "0x3DdCbDC3F0806b70B89EA4b27E23506Eb9FE36FE";
-  const iceCreamVanAddress = "0x29312e06DFd18044dABdA6e8289a853544C8dA82";
-  const masterChefAddress = "0xcbd879DAA863f3D9F6520CA8d00343b901EE725c";
+  const sicleRouterAddress = "0xb7fee4Ed4D9dfe60EFd7ea164315d89FcF0Cd9a8";
+  const popsTokenAddress = "0x5F05bB272624bcD1b89A2B3Ae9A01645D1369aE9";
+  const popsBarAddress = "0xE061D30E6Bb4F074309a644a4a00453F062e7CD3";
+  const iceCreamVanAddress = "0x837BD84F122EB1A1De6a9c424FDC8A23Bb38e59A";
 
   const [deployer] = await ethers.getSigners();
   console.log("deploy by acct: " + deployer.address);
@@ -47,7 +45,7 @@ async function main() {
   //POPSToken
   const POPSToken = await ethers.getContractFactory("POPSToken");
   const popsToken = verify
-    ? await POPSToken.attach(popTokenAddress)
+    ? await POPSToken.attach(popsTokenAddress)
     : await POPSToken.deploy(tokenName, tokenSymbol, INITIAL_MINT);
   await popsToken.deployed();
   console.log("POPSToken:", popsToken.address);
@@ -73,56 +71,37 @@ async function main() {
   await iceCreamVan.deployed();
   console.log("IceCreamVan:", iceCreamVan.address);
 
-  //MasterChef
-  const MasterChef = await ethers.getContractFactory("MasterChef");
-  const masterChef = verify
-    ? await MasterChef.attach(masterChefAddress)
-    : await MasterChef.deploy(
-      popsToken.address,
-      feeAddress,
-      TOKENS_PER_BLOCK,
-      START_BLOCK,
-      END_BLOCK,
-      BONUS_END_BLOCK
-    );
-  await masterChef.deployed();
-  console.log("MasterChef:", masterChef.address);
-
-  //Transfer ownership of POPSToken to MasterChef
   if (!verify) {
-    await popsToken.transferOwnership(masterChef.address);
-    console.log("POPSToken ownership transferred to MasterChef");
+    await sicleFactory.setFeeTo(feeTo);
+    console.log("Set feeTo:", feeTo);
+  }
+  if (!verify) {
+    await sicleFactory.setFeeToStake(iceCreamVan.address);
+    console.log("Set feeToStake:", iceCreamVan.address);
   }
 
   if (!verify) return;
 
-/*   console.log("verifying SicleFactory");
-  await run("verify:verify", {
-    address: sicleFactory.address,
-    contract: "contracts/sicle/SicleFactory.sol:SicleFactory",
-    constructorArguments: [deployer.address]
-  });
-*/
-  console.log("verifying SicleRouter02");
+/*   console.log("verifying SicleRouter02");
   await run("verify:verify", {
     address: sicleRouter.address,
     contract: "contracts/sicle/SicleRouter02.sol:SicleRouter02",
     constructorArguments: [sicleFactory.address, weth]
   });
-/*
+
   console.log("verifying POPSToken");
   await run("verify:verify", {
     address: popsToken.address,
     contract: "contracts/POPSToken.sol:POPSToken",
     constructorArguments: [tokenName, tokenSymbol, INITIAL_MINT]
-  });
+  }); */
 
-  console.log("verifying POPSBar");
+/*   console.log("verifying POPSBar");
   await run("verify:verify", {
     address: popsBar.address,
     contract: "contracts/POPSBar.sol:POPSBar",
     constructorArguments: [popsToken.address]
-  }); 
+  });  */
 
   console.log("verifying IceCreamVan");
   await run("verify:verify", {
@@ -135,21 +114,6 @@ async function main() {
       weth
     ]
   });
-
-  console.log("verifying MasterChef");
-  await run("verify:verify", {
-    address: masterChef.address,
-    contract: "contracts/MasterChef.sol:MasterChef",
-    constructorArguments: [
-      popsToken.address,
-      feeAddress,
-      TOKENS_PER_BLOCK,
-      START_BLOCK,
-      END_BLOCK,
-      BONUS_END_BLOCK
-    ]
-  });
-*/
 }
 
 main()

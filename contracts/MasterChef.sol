@@ -45,8 +45,6 @@ contract MasterChef is Ownable, ReentrancyGuard {
     }
     // The POPS TOKEN!
     POPSToken public pops;
-    // Dev address.
-    address public devaddr;
     // Block number when bonus POPS period ends.
     uint256 public bonusEndBlock;
     // POPS tokens created per block.
@@ -71,11 +69,9 @@ contract MasterChef is Ownable, ReentrancyGuard {
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event AddPool(uint256 _pid, uint256 _allocPoint, address indexed _lptoken);
     event UpdateAlloc(uint256 _pid, uint256 allocPoint, bool _withUpdate);
-    event UpdateDevAddress(address indexed _devaddr);
 
     constructor(
         POPSToken _pops,
-        address _devaddr,
         uint256 _popsPerBlock,
         uint256 _startBlock,
         uint256 _endBlock,
@@ -83,7 +79,6 @@ contract MasterChef is Ownable, ReentrancyGuard {
     ) public {
         require(_bonusEndBlock <= _endBlock, "MasterChef: _bonusEndBlock > _endBlock");
         pops = _pops;
-        devaddr = _devaddr;
         popsPerBlock = _popsPerBlock;
         bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
@@ -214,7 +209,6 @@ contract MasterChef is Ownable, ReentrancyGuard {
             multiplier.mul(popsPerBlock).mul(pool.allocPoint).div(
                 totalAllocPoint
             );
-        pops.mint(devaddr, popsReward.div(10));
         pops.mint(address(this), popsReward);
         pool.accPopsPerShare = pool.accPopsPerShare.add(
             popsReward.mul(1e12).div(lpSupply)
@@ -285,12 +279,5 @@ contract MasterChef is Ownable, ReentrancyGuard {
         } else {
             pops.transfer(_to, _amount);
         }
-    }
-
-    // Update dev address by the previous dev.
-    function dev(address _devaddr) external {
-        require(msg.sender == devaddr, "dev: wut?");
-        devaddr = _devaddr;
-        emit UpdateDevAddress(_devaddr);
     }
 }
