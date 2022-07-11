@@ -23,7 +23,7 @@ library SicleLibrary {
                 hex'ff',
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
-                hex'9131d59130958af5ccbb4968d39113c23959cdc2655495bcd43569b60aa1a5f4' // init code hash
+                hex'9e43ee37212e3296c7f6087d3e0a37b48a4e4e413538dac0fd18cfe2f80666c1' // init code hash
             ))));
     }
 

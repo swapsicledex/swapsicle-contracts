@@ -16,14 +16,15 @@ async function main() {
   const tokenSymbol = "PT"; //POPS
   const feeTo = "0x58334Ad2C84619bC1F9C61372FcA6D5EB787De64";
   // SET FACTORY ADDRESS
-  const sicleFactoryAddress = "0xA22FFF80baEF689976C55dabb193becdf023B6B9";
+  const sicleFactoryAddress = "0x9C60C867cE07a3c403E2598388673C10259EC768";
+  // SET POPSToken ADDRESS
+  const popsTokenAddress = "0x240248628B7B6850352764C5dFa50D1592A033A8";
 
   //verification
   const verify = true;
-  const sicleRouterAddress = "0xb7fee4Ed4D9dfe60EFd7ea164315d89FcF0Cd9a8";
-  const popsTokenAddress = "0x5F05bB272624bcD1b89A2B3Ae9A01645D1369aE9";
-  const popsBarAddress = "0xE061D30E6Bb4F074309a644a4a00453F062e7CD3";
-  const iceCreamVanAddress = "0x837BD84F122EB1A1De6a9c424FDC8A23Bb38e59A";
+  const sicleRouterAddress = "0xC7f372c62238f6a5b79136A9e5D16A2FD7A3f0F5";
+  const popsBarAddress = "0x5108176bC1B7e72440e6B48862c51d7eB0AEd5c4";
+  const iceCreamVanAddress = "0x8F0d1e091aC53A2C4143C1ecC1067F7E337680D3";
 
   const [deployer] = await ethers.getSigners();
   console.log("deploy by acct: " + deployer.address);
@@ -44,10 +45,7 @@ async function main() {
 
   //POPSToken
   const POPSToken = await ethers.getContractFactory("POPSToken");
-  const popsToken = verify
-    ? await POPSToken.attach(popsTokenAddress)
-    : await POPSToken.deploy(tokenName, tokenSymbol, INITIAL_MINT);
-  await popsToken.deployed();
+  const popsToken = await POPSToken.attach(popsTokenAddress);
   console.log("POPSToken:", popsToken.address);
 
   //POPSBar
@@ -89,19 +87,12 @@ async function main() {
     constructorArguments: [sicleFactory.address, weth]
   });
 
-  console.log("verifying POPSToken");
-  await run("verify:verify", {
-    address: popsToken.address,
-    contract: "contracts/POPSToken.sol:POPSToken",
-    constructorArguments: [tokenName, tokenSymbol, INITIAL_MINT]
-  }); */
-
-/*   console.log("verifying POPSBar");
+  console.log("verifying POPSBar");
   await run("verify:verify", {
     address: popsBar.address,
     contract: "contracts/POPSBar.sol:POPSBar",
     constructorArguments: [popsToken.address]
-  });  */
+  });   */
 
   console.log("verifying IceCreamVan");
   await run("verify:verify", {

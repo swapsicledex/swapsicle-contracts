@@ -8,7 +8,7 @@ import './libraries/SafeMath.sol';
 contract SicleERC20 {
     using SafeMathSicle for uint;
 
-    string public constant name = 'SicleSwap LP Token';
+    string public constant name = 'Swapsicle LP Token';
     string public constant symbol = 'SLP';
     uint8 public constant decimals = 18;
     uint  public totalSupply;

@@ -13,7 +13,8 @@ const {
   BSC_API_KEY,
   BSC_URL_TESTNET,
   MM_SS_DEPLOYER,
-  AVALANCHE_API_KEY
+  AVALANCHE_API_KEY,
+  MM_BG_SS_DEPLOYER
 } = process.env;
 module.exports = {
   solidity: {
